@@ -55,7 +55,7 @@ rule_version: {{rule_version}}
 
 ### 明日可花
 
-明日可花 **{{spendable}}** 分（其中冻结 {{reserve}} 分）。
+明日可花 **{{spendable}}** 分（已扣预留 {{reserve}} 分）。
 
 ### 余额
 

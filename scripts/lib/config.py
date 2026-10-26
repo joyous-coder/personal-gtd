@@ -103,8 +103,9 @@ def _coerce(data: dict) -> dict:
 def _validate(cfg: Config) -> None:
     if not 0 <= cfg.reserve <= 10:
         raise ValueError(f"reserve must be within [0, 10], got {cfg.reserve}")
-    if not math.isfinite(cfg.daily_cap) or cfg.daily_cap <= 0:
-        raise ValueError(f"daily_cap must be a finite number > 0, got {cfg.daily_cap}")
+    if not math.isfinite(cfg.daily_cap) or cfg.daily_cap < 30:
+        # 日分母 = min(daily_cap, max(30, 计划))；cap < 30 会让「30 分保底」失效
+        raise ValueError(f"daily_cap must be a finite number >= 30, got {cfg.daily_cap}")
     if not math.isfinite(cfg.weekly_cap) or cfg.weekly_cap <= 0:
         raise ValueError(f"weekly_cap must be a finite number > 0, got {cfg.weekly_cap}")
     if not math.isfinite(cfg.day_rate) or cfg.day_rate <= 0:

@@ -5,7 +5,8 @@
 `writer_chain` 按环境变量决定用哪个后端，`write_with_fallback` 在链上依次尝试。
 
 FNS 的两个坑：
-- HTTP 200 不代表成功，必须看 JSON 里的 `code == 1`；否则当失败。
+- HTTP 200 不代表成功，必须看 JSON 里的 `code == 1`；例外：`code == 430`
+  是「笔记不存在」（返回 None），其余非 1 的 code 都是故障，要抛异常。
 - DELETE 的参数要放进 JSON body（query 参数会返回 305 Invalid Params），
   且 `pathHash` 得先 GET 一次 `/note` 拿到。
 """
@@ -25,6 +26,9 @@ ENV_FNS_TOKEN = "PERSONAL_GTD_FNS_TOKEN"
 ENV_VAULT_DIR = "PERSONAL_GTD_VAULT_DIR"
 
 TRASH_DIR = ".trash"
+
+#: FNS 的「笔记不存在」业务码（HTTP 仍是 200，看 body 里的 code）
+_MISSING_CODES = frozenset({430})
 
 
 class NotesError(RuntimeError):
@@ -181,6 +185,11 @@ class FnsWriter:
         return isinstance(response, dict) and response.get("code") == 1
 
     @staticmethod
+    def _is_missing(response: Any) -> bool:
+        """`code == 430` = 笔记不存在；其余非 1 的 code 一律当故障。"""
+        return isinstance(response, dict) and response.get("code") in _MISSING_CODES
+
+    @staticmethod
     def _error_detail(response: Any) -> str:
         if isinstance(response, dict):
             code = response.get("code")
@@ -206,10 +215,21 @@ class FnsWriter:
         )
 
     def read(self, rel_path: str) -> str | None:
+        """读笔记：不存在返回 None；**其它失败（会话过期、服务端错误）抛 `NotesError`**。
+
+        FNS 用 HTTP 200 传业务错误码，所以不能只看 HTTP 状态：
+        `code == 430` 才是「笔记不存在」，其余非 1 的 code 都是故障。
+        把它压成 None 会让上游把「读不到」当成「没有」——`settle` 就会把周账
+        从 0 起算并写进账本。
+        """
         response = self._read_raw(rel_path)
-        if not self._ok(response):
+        if self._ok(response):
+            return self._content(response)
+        if self._is_missing(response):
             return None
-        return self._content(response)
+        raise NotesError(
+            f"GET /note failed for {rel_path}: {self._error_detail(response)}"
+        )
 
     def write(self, rel_path: str, content: str, create_only: bool = False) -> None:
         body: dict[str, Any] = {
@@ -227,8 +247,12 @@ class FnsWriter:
 
     def delete(self, rel_path: str) -> None:
         response = self._read_raw(rel_path)
-        if not self._ok(response):
+        if self._is_missing(response):
             return  # 不存在：幂等
+        if not self._ok(response):
+            raise NotesError(
+                f"GET /note failed for {rel_path}: {self._error_detail(response)}"
+            )
         data = response.get("data") if isinstance(response, dict) else None
         path_hash = data.get("pathHash") if isinstance(data, dict) else None
         if not path_hash:

@@ -59,7 +59,7 @@ scripts\gtd.cmd <subcommand> ...    # Windows
 | `scripts/gtd init` | 初始化配置、报告 writer 模式、补齐回顾目录、检查 python/dida 版本 | 可能建配置与目录 |
 | `scripts/gtd score --title '写周报' --priority 5 --size L` | 单任务算分，输出 JSON（`explicit_points` / `effective_points` / `final_points` / `late`） | 否 |
 | `scripts/gtd settle --date 2026-10-25 [--dry-run] [--late-subjective ID1,ID2] [--force]` | 结算一天、写日回顾（已存在时默认拒绝，`--force` 才覆盖） | 是（`--dry-run` 只打印 JSON） |
-| `scripts/gtd balance --date 2026-10-25` | 打印 `spendable` / `weekly_balance` / `spent_daily` / `spent_weekly` | 否 |
+| `scripts/gtd balance --date 2026-10-26` | 打印「今日可花」（取前一天的账本，今天没结算也能答）/「明日可花」/ 周余额 / 消费 | 否 |
 | `scripts/gtd backfill --from 2026-10-19 --to 2026-10-25 [--dry-run] [--force]` | 按日期升序补齐**缺失**的日回顾（已存在则跳过；`--force` 覆盖） | 是（`--dry-run` 否） |
 | `scripts/gtd audit --date 2026-10-25 [--late-subjective ID1,ID2]` 或 `--from ... --to ...` | 用滴答重算与 frontmatter 对账（含周账三项），不一致退出码 1 | 否 |
 | `scripts/gtd report --from 2026-10-19 --to 2026-10-25` | 打印周/区间回顾 Markdown | 否（要落盘时按确认卡另写） |
@@ -111,7 +111,7 @@ scripts\gtd.cmd <subcommand> ...    # Windows
 2. 否则 `PERSONAL_GTD_VAULT_DIR` 有值 → **folder**（直接写本地 vault）。
 3. 都没有 → **报错**，列出三个变量名，不写任何东西。
 
-**没有后端时只有 `score`、`settle --dry-run`、`init` 可用**；`settle`（非 `--dry-run`）、`balance`、`backfill`、`audit`、`report`、`monthly` 六条命令都会以退出码 1 失败（它们要读/写笔记）。`init` 在这种情况会打印「未配置：现在还不能写入」。
+**没有后端时只有 `score`、`settle --dry-run`、`init`、`selfcheck`、`pack` 可用**；`settle`（非 `--dry-run`）、`balance`、`backfill`、`audit`、`report`、`monthly` 六条命令都会以退出码 1 失败（它们要读/写笔记）。`init` 在这种情况会打印「未配置：现在还不能写入」。
 
 一次性设置（二选一，设置后重启你的 agent）：
 
@@ -143,7 +143,7 @@ scripts/gtd settle --date 2026-10-25 --vault-dir "<vault-root>"
 - [ ] 所有写操作都出过确认卡，且用户回过「过」。
 - [ ] 报出的每个数字都来自 `gtd.py` 输出（或用户原话），没有手算/猜测。
 - [ ] 没有猜 token、任务 ID、清单 ID；缺就查配置或问用户。
-- [ ] 没有写进废弃目录；日回顾只在 `1-日维度`。
+- [ ] 没有写进废弃目录；日回顾只写在 `2-回顾/1-日维度`。
 - [ ] 没有在未确认时用 `backfill` / `settle --force` 覆盖已存在的日回顾；`settle` 被拒绝（退出 1）时没硬加 `--force`，需要覆盖时才加，且先读一遍旧内容。
 - [ ] 用 `score` 预填新任务时带了 `--size`（S/M/L），没有手算「优先级底分 × 规模」。
 - [ ] 结算过主观超时的日子，`audit` 带了同一份 `--late-subjective IDS`。

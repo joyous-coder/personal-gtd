@@ -72,7 +72,7 @@ token 只从环境变量或外部文件读，**永不写进 config、笔记、�
 | `scripts/gtd init` | 初始化配置、报告写入后端、补齐回顾目录、检查 python/dida 版本 | 可能建配置与目录 |
 | `scripts/gtd score --title '写周报' --priority 5 --size L` | 单任务算分，输出 JSON | 否 |
 | `scripts/gtd settle --date 2026-10-25 [--dry-run] [--force]` | 结算一天、写日回顾（已存在时默认拒绝） | 是 |
-| `scripts/gtd balance --date 2026-10-25` | 打印可花分与日/周余额 | 否 |
+| `scripts/gtd balance --date 2026-10-26` | 「今日可花」（取前一天账本，今天没结算也能答）/「明日可花」/ 周余额 / 消费 | 否 |
 | `scripts/gtd backfill --from 2026-10-19 --to 2026-10-25` | 按日期升序补齐缺失的日回顾 | 是 |
 | `scripts/gtd audit --date 2026-10-25` | 用滴答重算，与日回顾 frontmatter 对账 | 否 |
 | `scripts/gtd report --from ... --to ...` / `scripts/gtd monthly --month 2026-10` | 打印周/月回顾 Markdown | 否 |

@@ -109,20 +109,21 @@ class TestLegacyNotesAreNotLedgers(unittest.TestCase):
         # 若把老笔记当 0% 工作日，avg(1, 0) = 0.5 < 0.6 → 金额 0
         self.assertIn("本月金额：900.00", out)
 
-    def test_balance_reports_legacy_note_as_missing(self):
+    def test_balance_ignores_legacy_note_but_still_answers_today(self):
+        """老格式日总结不是账本：当作「当天没结算」，今日额度仍取自前一天。"""
         with tempfile.TemporaryDirectory() as d:
             self._vault(d)
             code, out, err = self._run(d, ["balance", "--date", "2026-10-23"])
-        self.assertEqual(code, 1)
-        self.assertIn("不是账本笔记，已跳过", err)
-        self.assertNotIn("spendable", out)
+        self.assertEqual(code, 0, err)
+        self.assertIn("明日可花：未知（2026-10-23 还没结算）", out)
+        self.assertIn("今日可花：25 分", out)
 
     def test_balance_still_works_on_ledger(self):
         with tempfile.TemporaryDirectory() as d:
             self._vault(d)
             code, out, err = self._run(d, ["balance", "--date", "2026-10-22"])
         self.assertEqual(code, 0, err)
-        self.assertIn("spendable: 25", out)
+        self.assertIn("明日可花：25 分（2026-10-22 结算后）", out)
 
 
 class TestInitDirs(unittest.TestCase):
@@ -172,6 +173,118 @@ class TestInitDirs(unittest.TestCase):
                 self.assertTrue((base / "2-回顾" / name).is_dir(), name)
             # 重跑：目录已存在也不报错
             self.assertEqual(gtd.main(["init"]), 0)
+
+
+class TestBalanceSemantics(unittest.TestCase):
+    """`spendable` 存在当天 frontmatter 里，表示的是**明天**的额度。
+
+    所以 `balance --date D` 要回答两件事：
+    - 今日可花 = D-1 那份账本的 `spendable`（今天没结算也能答）；
+    - 明日可花 = D 结算后的 `spendable`（没结算就是未知）。
+    """
+
+    PREV = "7-规划回顾/2-回顾/1-日维度/review-2026-10-25-星期日.md"
+    DAY = "7-规划回顾/2-回顾/1-日维度/review-2026-10-26-星期一.md"
+
+    @staticmethod
+    def fm(**fields):
+        lines = ["---"]
+        lines += [f"{key}: {value}" for key, value in fields.items()]
+        lines += ["---", ""]
+        return chr(10).join(lines)
+
+    def _run(self, vault, day):
+        import io
+        from contextlib import redirect_stderr, redirect_stdout
+
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            patch.object(gtd, "writer_chain", return_value=[FolderWriter(Path(vault))]),
+            patch.object(gtd, "load_config", return_value=Config()),
+            redirect_stdout(out),
+            redirect_stderr(err),
+        ):
+            code = gtd.main(["balance", "--date", day, "--vault-dir", vault])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_today_pool_comes_from_previous_ledger(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = FolderWriter(Path(d))
+            w.write(self.PREV, self.fm(date="2026-10-25", earned_total=11,
+                                        spendable=6, weekly_balance=11))
+            code, out, _err = self._run(d, "2026-10-26")
+        self.assertEqual(code, 0)
+        self.assertIn("今日可花：6", out)
+        self.assertIn("2026-10-25", out)
+
+    def test_unsatisfied_day_still_answers_and_flags_unknown_tomorrow(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = FolderWriter(Path(d))
+            w.write(self.PREV, self.fm(date="2026-10-25", earned_total=11, spendable=6))
+            code, out, _err = self._run(d, "2026-10-26")
+        self.assertEqual(code, 0)
+        self.assertIn("明日可花：未知", out)
+
+    def test_settled_day_reports_tomorrow_pool(self):
+        with tempfile.TemporaryDirectory() as d:
+            w = FolderWriter(Path(d))
+            w.write(self.PREV, self.fm(date="2026-10-25", earned_total=11, spendable=6))
+            w.write(self.DAY, self.fm(date="2026-10-26", earned_total=9, spendable=4,
+                                      weekly_balance=15, spent_daily=1, spent_weekly=2))
+            code, out, _err = self._run(d, "2026-10-26")
+        self.assertEqual(code, 0)
+        self.assertIn("今日可花：6", out)
+        self.assertIn("明日可花：4", out)
+        self.assertIn("周余额：15", out)
+
+    def test_no_ledger_anywhere_is_an_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out, err = self._run(d, "2026-10-26")
+        self.assertEqual(code, 1)
+        self.assertIn("settle", err)
+        self.assertNotIn("今日可花", out)
+
+
+
+class TestReportRefusesToGuessOnBackendFailure(unittest.TestCase):
+    """后端故障不能被报成「没有账本」——月结金额要换真钱，静默偏低最危险。"""
+
+    class Boom:
+        def read(self, rel_path):
+            raise RuntimeError("HTTP 500 backend down")
+
+        def write(self, rel_path, content, create_only=False):
+            raise RuntimeError("down")
+
+        def delete(self, rel_path):
+            raise RuntimeError("down")
+
+    def _run(self, argv):
+        import io
+        from contextlib import redirect_stderr, redirect_stdout
+
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            patch.object(gtd, "writer_chain", return_value=[self.Boom()]),
+            patch.object(gtd, "load_config", return_value=Config()),
+            redirect_stdout(out),
+            redirect_stderr(err),
+        ):
+            code = gtd.main(argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_report_fails_instead_of_reporting_no_notes(self):
+        code, out, err = self._run(["report", "--from", "2026-10-25", "--to", "2026-10-25"])
+        self.assertEqual(code, 1)
+        self.assertIn("失败", err)
+        self.assertNotIn("没有日回顾", err)
+        self.assertEqual(out, "")
+
+    def test_monthly_fails_instead_of_reporting_low_completion(self):
+        code, out, err = self._run(["monthly", "--month", "2026-10"])
+        self.assertEqual(code, 1)
+        self.assertIn("失败", err)
+        self.assertEqual(out, "")
 
 class TestBackfillSkip(unittest.TestCase):
     """Task 10 复审：backfill 默认只补缺失日期，--force 才覆盖人写的日回顾。"""

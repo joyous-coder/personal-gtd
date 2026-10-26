@@ -7,7 +7,7 @@ set -eu
 DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 
 MISSING=""
-for m in config dida models notes report review_note scoring settle; do
+for m in config dida health models notes pack report review_note scoring settle; do
   if [ ! -f "$DIR/lib/$m.py" ]; then
     MISSING="$MISSING $m"
   fi

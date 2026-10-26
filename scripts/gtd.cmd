@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 set "DIR=%~dp0"
 set "MISSING="
-for %%m in (config dida models notes report review_note scoring settle) do (
+for %%m in (config dida health models notes pack report review_note scoring settle) do (
   if not exist "%DIR%lib\%%m.py" set "MISSING=!MISSING! %%m"
 )
 if not "!MISSING!"=="" (

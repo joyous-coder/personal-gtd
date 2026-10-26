@@ -16,11 +16,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 #: `scripts/lib/` 下必须存在的模块；少一个整个 skill 都跑不起来
+#: `gtd.py` 在导入期就会 import 其中的每一个；缺任何一个都要在预检阶段点名，
+#: 否则会抛 `ModuleNotFoundError`（正是预检要消灭的报错）。
+#: `scripts/gtd` / `scripts/gtd.cmd` 里有一份同样的清单，测试保证两边同步。
 REQUIRED_MODULES = (
     "config",
     "dida",
+    "health",
     "models",
     "notes",
+    "pack",
     "report",
     "review_note",
     "scoring",

@@ -2,8 +2,10 @@
 
 数据只来自日回顾的 frontmatter（`1-日维度`），不另存账本（设计稿 §6）：
 
-- 周汇总：区间内 `earned_total` / `planned_total` 求和，
-  `rate = min(1, 收入 / min(60, max(30, 计划合计)))`。
+- 周汇总：区间内 `earned_total` / `planned_total` 求和；`rate` 用与月结**完全同一套**
+  聚合（`period_summary`）：工作日取各天完成率的平均、双休按 ISO 周成组后再平均、
+  合并时空的一侧不按 0 算。换言之，周报就是这一周的「迷你月结」。
+  （早期版本把日的 `min(60, …)` 上限直接套在一周上，结果做一半也报 1.000。）
 - 月完成率 = avg(工作日完成率, 双休完成率)：
   - 工作日完成率：各工作日 `rate` 的平均；
   - 双休完成率：按 ISO 周把周六/周日配成一组，`收入 = 组内和`、
@@ -128,16 +130,47 @@ def consumption_totals(days: Sequence[Mapping[str, object]]) -> dict[str, float]
 # ---------- 汇总 ----------
 
 
+def period_summary(days: Sequence[Mapping[str, object]]) -> dict[str, float]:
+    """区间完成率：工作日与双休各自算，再合并（周报与月结共用同一口径）。
+
+    - 工作日：各天 `rate` 的平均（每天的分母仍是 `min(60, max(30, 当天计划))`）；
+    - 双休：按 ISO 周把周六/周日配成一组，组内合计后算一次，再平均；
+    - 合并：两侧都有数据就平均，只有一侧就用那一侧——**空窗期不按 0 平均**，
+      否则只结算了半个月会把完成率腰斩。
+    """
+    workdays = [day for day in days if _day_kind(day) == WORKDAY]
+    weekends = [day for day in days if _day_kind(day) == WEEKEND]
+
+    weekday = _average([_day_rate(day) for day in workdays])
+    weekend = weekend_rate(weekends)
+
+    if workdays and weekends:
+        overall = (weekday + weekend) / 2
+    elif workdays:
+        overall = weekday
+    elif weekends:
+        overall = weekend
+    else:
+        overall = 0.0
+
+    return {
+        "weekday_rate": weekday,
+        "weekend_rate": weekend,
+        "overall_rate": min(1.0, overall),
+    }
+
+
 def weekly_summary(days: Sequence[Mapping[str, object]]) -> dict[str, float]:
-    """区间汇总：收入/计划求和，完成率用同一个分母公式。"""
+    """区间汇总：收入/计划求和；`rate` 走 `period_summary`（与月结同口径）。"""
     earned_total = sum(_as_float(day.get("earned_total")) for day in days)
     planned_total = sum(_as_float(day.get("planned_total")) for day in days)
-    denominator = _denominator(planned_total)
-    rate = min(1.0, earned_total / denominator) if denominator > 0 else 0.0
+    period = period_summary(days)
     return {
         "earned_total": earned_total,
         "planned_total": planned_total,
-        "rate": rate,
+        "rate": period["overall_rate"],
+        "weekday_rate": period["weekday_rate"],
+        "weekend_rate": period["weekend_rate"],
     }
 
 
@@ -177,22 +210,10 @@ def monthly_summary(
     返回 `weekday_rate` / `weekend_rate` / `overall_rate` / `money` /
     `salary` / `threshold`；金额已含门槛与惩罚，完成率封顶 100%。
     """
-    workdays = [day for day in days if _day_kind(day) == WORKDAY]
-    weekends = [day for day in days if _day_kind(day) == WEEKEND]
-
-    weekday = _average([_day_rate(day) for day in workdays])
-    weekend = weekend_rate(weekends)
-
-    # 一侧没有数据就用另一侧，避免半个月的空窗把完成率拉成一半
-    if workdays and weekends:
-        overall = (weekday + weekend) / 2
-    elif workdays:
-        overall = weekday
-    elif weekends:
-        overall = weekend
-    else:
-        overall = 0.0
-    overall = min(1.0, overall)
+    period = period_summary(days)
+    weekday = period["weekday_rate"]
+    weekend = period["weekend_rate"]
+    overall = period["overall_rate"]
 
     limit = float(threshold)
     if overall + _EPSILON < limit:
@@ -271,6 +292,8 @@ def render_weekly(
         "earned_total": _num(summary["earned_total"]),
         "planned_total": _num(summary["planned_total"]),
         "rate": _ratio(summary["rate"]),
+        "weekday_rate": _ratio(summary["weekday_rate"]),
+        "weekend_rate": _ratio(summary["weekend_rate"]),
         "spent_daily": _num(spent["spent_daily"]),
         "spent_weekly": _num(spent["spent_weekly"]),
         "daily_rows": _daily_rows(days),

@@ -42,7 +42,38 @@ class TestWeekly(unittest.TestCase):
         r = weekly_summary(days)
         self.assertEqual(r["earned_total"], 50.0)
         self.assertEqual(r["planned_total"], 80.0)
-        self.assertAlmostEqual(r["rate"], 50.0 / 60.0)  # denom = min(60,max(30,80))
+
+    def test_week_rate_is_average_of_daily_rates(self):
+        """回归：以前把日的 60 分上限套在一周上，做一半也报 1.000。"""
+        days = [d(f"2026-10-{19+i}", "workday", 15, 30, 30, 0.5) for i in range(7)]
+        self.assertAlmostEqual(weekly_summary(days)["rate"], 0.5)
+
+    def test_week_rate_reports_real_progress(self):
+        days = [d(f"2026-10-{19+i}", "workday", 30, 30, 30, 1.0) for i in range(7)]
+        self.assertAlmostEqual(weekly_summary(days)["rate"], 1.0)
+
+    def test_partial_week_matches_monthly_for_the_same_days(self):
+        days = [d("2026-10-23","workday",10.5,3,30,0.350),
+                d("2026-10-25","weekend",11,17,30,0.367)]
+        weekly = weekly_summary(days)["rate"]
+        monthly = monthly_summary(days, salary=0, threshold=0.6, budget_rate=0.1)["overall_rate"]
+        self.assertAlmostEqual(weekly, monthly)
+        # 双休侧按组内合计重算（11/30），不直接用当天 frontmatter 的 0.367
+        self.assertAlmostEqual(weekly, (0.350 + 11 / 30) / 2, places=6)
+
+    def test_week_rate_does_not_treat_empty_side_as_zero(self):
+        """只有工作日数据的一周：取工作日那一侧，不被空的周末拉低。"""
+        days = [d("2026-10-19","workday",30,30,30,1.0),
+                d("2026-10-20","workday",30,30,30,1.0)]
+        self.assertAlmostEqual(weekly_summary(days)["rate"], 1.0)
+
+    def test_week_summary_exposes_both_sides(self):
+        days = [d("2026-10-23","workday",30,30,30,1.0),
+                d("2026-10-24","weekend",15,30,30,0.5)]
+        r = weekly_summary(days)
+        self.assertAlmostEqual(r["weekday_rate"], 1.0)
+        self.assertAlmostEqual(r["weekend_rate"], 0.5)
+        self.assertAlmostEqual(r["rate"], 0.75)
 
 class TestRender(unittest.TestCase):
     """审阅修复：frontmatter 是机器可读层，布尔必须 true/false；周报要带消费合计。"""

@@ -12,7 +12,7 @@
 2. 用户确认后 `settle --date YYYY-MM-DD`（不加 `--dry-run`）写入；
 3. 读回笔记，补正文里需要人写的部分。
 
-注意 `--dry-run` 的口径：它**不读前一天账本**，`weekly_*` / `spent_*` / `unmet_*` 都从 0 起算，只能当参考；`earned_*` / `planned_total` / `denominator` / `rate` / `spendable` / `late_*` 与真实结算一致。真实写入后用 `balance` 读回准确余额。
+注意 `--dry-run` 的口径：它**不读前一天账本**，`weekly_*` / `spent_*` / `unmet_*` 都从 0 起算，只能当参考；`earned_*` / `planned_total` / `denominator` / `rate` / `spendable` / `late_*` 与真实结算一致。真实写入后用 `balance --date <明天>` 读回准确额度：`balance` 的「今日可花」取自**前一天**的账本（`spendable` 是次日额度），「明日可花」才是当天结算出来的。
 
 **`settle` 默认拒绝覆盖已存在的日回顾**：打印 `已存在 <path>；如需覆盖请加 --force` 并退出 1，一个字都不写。这是为了保护正文里人写的总结/确认/谋划/身份反馈。确实要整篇重算时先读旧内容，再在确认卡里写明「将覆盖正文」，然后加 `--force`；同一天连跑两次 `--force` 结果字节一致（幂等）。
 
@@ -33,7 +33,9 @@
 
 ## 周回顾（周日）
 
-1. `report --from <周一> --to <周日>` 拿数据和 Markdown；
+1. `report --from <周一> --to <周日>` 拿数据和 Markdown —— 它的 `rate` 与月结**同一套口径**
+   （工作日取各天完成率平均、双休成组后平均、空的一侧不按 0 算），所以周报就是这一周的迷你月结；
+   报里的 `weekday_rate` / `weekend_rate` 可以分别看；
 2. 写 `7-规划回顾/2-回顾/2-周维度/review-YYYY-Www.md`（ISO 周；写完要用户确认）。
 
 内容：

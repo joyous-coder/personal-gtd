@@ -172,6 +172,70 @@ class TestSettleProtectsExistingNote(SettleCase):
         self.assertEqual(self.note(SUNDAY).read_text(encoding="utf-8"), first)
 
 
+
+class _FakeHttpResponse:
+    """只实现 urlopen 上下文管理器需要的 `read()`。"""
+
+    def __init__(self, body: bytes):
+        self._body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return self._body
+
+
+class TestFnsBodyErrorIsNotMissing(SettleCase):
+    """FNS 用 HTTP 200 传业务错误码：只有 430 才是「笔记不存在」。
+
+    回归：会话过期（code 308）曾被压成 None，于是 `settle` 把周账从 0 起算，
+    再降级写到本地 folder，留下一份静默错误的账本（退出码还是 0）。
+    """
+
+    def _settle_with_fns_code(self, code):
+        import json as _json
+        import urllib.request as _urllib
+
+        from lib.notes import FnsWriter
+
+        payload = _json.dumps({"code": code, "message": "boom"}).encode("utf-8")
+        fns = FnsWriter("https://x", "tok", "V")
+        with patch.object(
+            _urllib, "urlopen", side_effect=lambda request, timeout=None: _FakeHttpResponse(payload)
+        ):
+            return self.settle(
+                SUNDAY,
+                FakeClient(tasks=(task("t1", "写周报 $4", SUNDAY),)),
+                writers=[fns, self.folder],
+            )
+
+    def test_session_expired_aborts_without_writing(self):
+        code, _out, err = self._settle_with_fns_code(308)
+
+        self.assertEqual(code, 1)
+        # 先查目标笔记是否存在，跳过时给的是这条；关键是没有写入
+        self.assertIn("本次未写入", err)
+        self.assertFalse(self.note(SUNDAY).exists())
+
+    def test_server_error_code_aborts_without_writing(self):
+        code, _out, err = self._settle_with_fns_code(500)
+
+        self.assertEqual(code, 1)
+        self.assertIn("本次未写入", err)
+        self.assertFalse(self.note(SUNDAY).exists())
+
+    def test_note_does_not_exist_still_settles_from_zero(self):
+        """430 是真正的「没有」：照常结算，只提示从 0 起算。"""
+        code, _out, err = self._settle_with_fns_code(430)
+
+        self.assertEqual(code, 0)
+        self.assertIn("前一天没有日回顾，周账从 0 起算", err)
+        self.assertTrue(self.note(SUNDAY).exists())
+
 class TestSettleLedgerReadIsTriState(SettleCase):
     """读前一天笔记失败 → 退出 1 且不写；确实没有 → 退出 0 并提示从 0 起算。"""
 

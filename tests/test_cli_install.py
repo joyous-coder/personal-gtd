@@ -105,19 +105,22 @@ class TestPreflight(unittest.TestCase):
     """源码缺失时，gtd.py 要在 import 崩掉之前就给出人话。"""
 
     def test_missing_module_source_exits_2(self):
-        with tempfile.TemporaryDirectory() as d:
-            tree = Path(d) / "scripts"
-            shutil.copytree(SCRIPTS, tree)
-            (tree / "lib" / "scoring.py").unlink()
-            proc = subprocess.run(
-                [sys.executable, str(tree / "gtd.py"), "score", "--title", "x"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            self.assertEqual(proc.returncode, 2)
-            self.assertIn("scoring", proc.stderr)
-            self.assertIn("源码", proc.stderr)
+        # health/pack 是 gtd.py 导入期就要的，也得由预检点名而不是抛 traceback
+        for module in ("scoring", "pack", "health"):
+            with self.subTest(module=module), tempfile.TemporaryDirectory() as d:
+                tree = Path(d) / "scripts"
+                shutil.copytree(SCRIPTS, tree)
+                (tree / "lib" / f"{module}.py").unlink()
+                proc = subprocess.run(
+                    [sys.executable, str(tree / "gtd.py"), "score", "--title", "x"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                self.assertEqual(proc.returncode, 2)
+                self.assertIn(module, proc.stderr)
+                self.assertIn("源码", proc.stderr)
+                self.assertNotIn("Traceback", proc.stderr)
 
 
 class TestLauncherGuards(unittest.TestCase):

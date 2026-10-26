@@ -5,6 +5,8 @@ days: {{days}}
 earned_total: {{earned_total}}
 planned_total: {{planned_total}}
 rate: {{rate}}
+weekday_rate: {{weekday_rate}}
+weekend_rate: {{weekend_rate}}
 rule_version: v1
 ---
 # 周回顾 {{from}} ~ {{to}}
@@ -12,7 +14,7 @@ rule_version: v1
 ## 趋势
 
 - 积分：收入 {{earned_total}} 分，计划合计 {{planned_total}} 分
-- 完成率：{{rate}}（分母 = min(60, max(30, 计划合计))）
+- 完成率：{{rate}}（工作日 {{weekday_rate}} / 双休 {{weekend_rate}}；各自按日算完成率再合并，空的一侧不按 0 算）
 - 消费：日账 {{spent_daily}} 分 / 周账 {{spent_weekly}} 分
 - 有日回顾 {{days}} 天
 

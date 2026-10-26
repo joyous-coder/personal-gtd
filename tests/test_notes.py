@@ -59,10 +59,12 @@ class TestFnsWriter(unittest.TestCase):
             self.assertEqual(body["path"], "a.md")
             self.assertTrue(body["createOnly"])
 
-    def test_read_non_success_returns_none(self):
+    def test_read_unknown_non_success_code_raises(self):
+        """只有 430（笔记不存在）算 None；其它业务码是故障，不能当「没有」。"""
         w = FnsWriter("https://x", "t", "V")
         with patch.object(w, "_request", return_value={"code": 404, "message": "no"}):
-            self.assertIsNone(w.read("a.md"))
+            with self.assertRaises(NotesError):
+                w.read("a.md")
 
     def test_delete_uses_body_with_path_hash(self):
         w = FnsWriter("https://x", "t", "V")
@@ -156,3 +158,32 @@ class TestFnsTransport(unittest.TestCase):
                 FnsWriter("https://x", "tok", "V").read("a.md")
         self.assertIn("invalid JSON", str(cm.exception))
         self.assertIsInstance(cm.exception.__cause__, json.JSONDecodeError)
+
+
+class TestFnsReadDistinguishesMissingFromFailure(unittest.TestCase):
+    """FNS 用 HTTP 200 传错误 code：只有「笔记不存在」才算 None。
+
+    实测服务端：会话过期返回 `{"code": 308, ...}` + HTTP 200。若把这类响应也当成
+    「不存在」，`settle` 会把周账从 0 起算并写进账本——故障被当成「没有」。
+    """
+
+    def _read_with(self, payload):
+        _, fake = TestFnsTransport()._capture(json.dumps(payload).encode("utf-8"))
+        with patch("urllib.request.urlopen", side_effect=fake):
+            return FnsWriter("https://x", "tok", "V").read("a.md")
+
+    def test_note_does_not_exist_is_none(self):
+        self.assertIsNone(self._read_with({"code": 430, "message": "Note does not exist"}))
+
+    def test_session_expired_raises(self):
+        with self.assertRaises(NotesError) as cm:
+            self._read_with({"code": 308, "message": "Session expired, please log in again."})
+        self.assertIn("308", str(cm.exception))
+
+    def test_server_error_code_raises(self):
+        with self.assertRaises(NotesError):
+            self._read_with({"code": 500, "message": "Internal error"})
+
+    def test_success_but_no_content_is_none(self):
+        """code=1 但没有内容：确实是空笔记，不算故障。"""
+        self.assertIsNone(self._read_with({"code": 1, "data": None}))

@@ -40,9 +40,19 @@ from pathlib import Path
 # 允许直接 `python scripts/gtd.py ...`：把 scripts/ 放进搜索路径，`lib.*` 才导得进来
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-# 下面两个模块没有内部依赖，必须排在其它 lib 导入之前：预检要在 import 崩掉之前跑
-from lib.health import REQUIRED_MODULES, build_report, check_install, render_report  # noqa: E402
-from lib.pack import build_pack, collect_files  # noqa: E402
+# 预检要排在其它 lib 导入之前：缺源码时 `import lib.scoring` 会先炸成
+# `ModuleNotFoundError`，那对人没有意义。`lib.health` 自己也可能缺，所以先兜一层；
+# `lib.pack` 放到预检之后再导（预检会点名它）。
+try:
+    from lib.health import REQUIRED_MODULES, build_report, check_install, render_report  # noqa: E402
+except ModuleNotFoundError as exc:  # 连预检模块都缺：只能直接报名字
+    print(
+        f"personal-gtd 安装不完整：缺少源码 {exc.name or 'lib.health'}。"
+        "只有 .pyc 不可用：字节码与 Python 版本绑定，换机器/换版本就失效。"
+        "请用 `gtd pack` 打源码包，解压覆盖后重装。",
+        file=sys.stderr,
+    )
+    raise SystemExit(2) from exc
 
 
 def _preflight_sources() -> None:
@@ -65,6 +75,8 @@ def _preflight_sources() -> None:
 
 
 _preflight_sources()
+
+from lib.pack import build_pack, collect_files  # noqa: E402
 
 from lib.config import (  # noqa: E402
     Config,
@@ -574,22 +586,38 @@ def _cmd_settle(args: argparse.Namespace) -> int:
 
 # ---------- balance ----------
 
-#: `balance` 打印的 frontmatter 字段（设计稿 §7 命令表：今日可花、日/周余额）
+#: `balance` 从两份账本里取的字段（当日那份 = 结出来的明日额度）
 BALANCE_FIELDS = ("spendable", "weekly_balance", "spent_daily", "spent_weekly")
 
 
+def _balance_line(label: str, value: float | None, source: str) -> str:
+    shown = "未知" if value is None else f"{_format_number(value)} 分"
+    return f"{label}：{shown}（{source}）"
+
+
 def _cmd_balance(args: argparse.Namespace) -> int:
+    """`balance --date D`：今天能花多少 + D 结算后明天能花多少。
+
+    `spendable` 写在**当天**的 frontmatter 里，含义是**次日**额度（消费扣的是
+    `previous_spendable`）。所以「今天能花多少」必须读**前一天**的账本——
+    当天还没结算时也要能答，这是这个命令最常见的用法。
+    """
     try:
         config = load_config()
     except (OSError, ValueError) as exc:
         print(f"配置错误：{exc}", file=sys.stderr)
         return 1
 
-    rel_path = _review_rel_path(args.date, config)
+    day = args.date
+    previous_day = day - timedelta(days=1)
+    prev_rel = _review_rel_path(previous_day, config)
+    day_rel = _review_rel_path(day, config)
+
     try:
         with _vault_override(args.vault_dir):
             writers = writer_chain(config.vault)
-            text = _read_note(writers, rel_path)
+            prev_state, prev_text = _read_note_state(writers, prev_rel)
+            day_state, day_text = _read_note_state(writers, day_rel)
     except WriterConfigError:
         print(WRITER_HINT, file=sys.stderr)
         return 1
@@ -597,27 +625,61 @@ def _cmd_balance(args: argparse.Namespace) -> int:
         print(f"笔记读写失败：{exc}", file=sys.stderr)
         return 1
 
-    if text is None:
+    if READ_FAILED in (prev_state, day_state):
+        broken = prev_rel if prev_state == READ_FAILED else day_rel
         print(
-            f"没有 {rel_path} 的日回顾：请先运行 "
-            f"`gtd settle --date {args.date.isoformat()}`",
+            f"读取 {broken} 失败：余额无法确认（故障不等于「没有」），先检查笔记后端",
             file=sys.stderr,
         )
         return 1
 
-    values = parse_frontmatter(text)
-    if not _is_ledger(values):
+    prev_values = parse_frontmatter(prev_text or "")
+    day_values = parse_frontmatter(day_text or "")
+    prev_is_ledger = prev_state == READ_OK and _is_ledger(prev_values)
+    day_is_ledger = day_state == READ_OK and _is_ledger(day_values)
+
+    if not prev_is_ledger and not day_is_ledger:
         print(
-            f"{rel_path} 不是账本笔记，已跳过；"
-            f"请先运行 `gtd settle --date {args.date.isoformat()}` 生成账本"
-            "（老的自适应日总结没有 frontmatter，不会被当成账本）",
+            f"{day.isoformat()} 与前一天 {previous_day.isoformat()} 都没有日回顾："
+            f"先运行 `gtd settle --date {previous_day.isoformat()}`，"
+            f"再运行 `gtd settle --date {day.isoformat()}`",
             file=sys.stderr,
         )
         return 1
-    print(f"{args.date.isoformat()} 余额（{rel_path}）")
-    for key in BALANCE_FIELDS:
-        number = _parse_number(values.get(key))
-        print(f"{key}: {'0' if number is None else _format_number(number)}")
+
+    today_pool = _parse_number(prev_values.get("spendable")) if prev_is_ledger else None
+    tomorrow_pool = _parse_number(day_values.get("spendable")) if day_is_ledger else None
+
+    # 周账与消费取「更新的那一份」：当日账本优先，退回前一天
+    source_values = day_values if day_is_ledger else prev_values
+    source_day = day if day_is_ledger else previous_day
+
+    print(f"{day.isoformat()} 余额")
+    print(
+        _balance_line(
+            "今日可花",
+            today_pool,
+            f"来自 {previous_day.isoformat()} 的日回顾" if prev_is_ledger
+            else f"{previous_day.isoformat()} 没有日回顾",
+        )
+    )
+    print(
+        _balance_line(
+            "明日可花",
+            tomorrow_pool,
+            f"{day.isoformat()} 结算后" if day_is_ledger
+            else f"{day.isoformat()} 还没结算",
+        )
+    )
+    for key, label in (
+        ("weekly_balance", "周余额"),
+        ("spent_daily", "日账消费"),
+        ("spent_weekly", "周账消费"),
+    ):
+        number = _parse_number(source_values.get(key))
+        print(f"{label}：{'0' if number is None else _format_number(number)} 分")
+    if source_day != day:
+        print(f"（周账与消费取自 {source_day.isoformat()} 的日回顾）", file=sys.stderr)
     return 0
 
 
@@ -823,6 +885,9 @@ def _load_day_frontmatter(
     `1-日维度` 里还有老的自适应日总结，它们的 frontmatter 解析出来是 `{}`；
     当成「完成率 0」会把统计拉垮，所以只接受带 `date` + `earned_total` 的账本，
     其余按「跳过」处理并说明原因。
+
+    **读失败**（后端/HTTP 故障）直接抛 `NotesError`，不并入 `missing`——
+    「读不到」不等于「没有」，报表不能基于静默残缺的数据。
     """
     values: list[dict[str, object]] = []
     missing: list[date] = []
@@ -830,7 +895,13 @@ def _load_day_frontmatter(
         writers = writer_chain(config.vault)
         for day in days:
             rel_path = _review_rel_path(day, config)
-            text = _read_note(writers, rel_path)
+            state, text = _read_note_state(writers, rel_path)
+            if state == READ_FAILED:
+                # 后端故障不能报成「没有账本」：月金额要换真钱，静默偏低最危险
+                raise NotesError(
+                    f"读取 {rel_path} 失败；报表不能基于残缺数据生成"
+                    "（先检查笔记后端再重跑）"
+                )
             if text is None:
                 missing.append(day)
                 continue

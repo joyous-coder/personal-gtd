@@ -32,6 +32,15 @@ class TestConfig(unittest.TestCase):
             p.write_text("{}", encoding="utf-8")
             self.assertEqual(load_config(p).config_path, str(p))
 
+    def test_daily_cap_below_floor_is_rejected(self):
+        """日分母有 30 分保底；cap < 30 会让保底失效，直接拒绝而不是静默取小值。"""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "config.json"
+            p.write_text(json.dumps({"daily_cap": 20}), encoding="utf-8")
+            with self.assertRaises(ValueError) as cm:
+                load_config(p)
+            self.assertIn("daily_cap", str(cm.exception))
+
     def test_day_rate_must_be_positive(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "config.json"
