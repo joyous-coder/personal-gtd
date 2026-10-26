@@ -17,13 +17,16 @@ class TestCli(unittest.TestCase):
     def test_settle_dry_run_does_not_write(self):
         from datetime import date
         from lib.models import DayInputs
+        # `_build_client` 会去读真实的滴答 token 文件；测试不依赖本机环境
         with patch.object(gtd, "load_day_inputs") as load, \
+             patch.object(gtd, "_build_client") as build, \
              patch.object(gtd, "writer_chain") as wc, \
              patch("sys.stdout"):
             load.return_value = DayInputs(day=date(2026,10,25), tasks=(), habits=(),
                                            habit_values={}, focus=())
             code = gtd.main(["settle", "--date", "2026-10-25", "--dry-run"])
         wc.assert_not_called()
+        build.assert_called()
         self.assertEqual(code, 0)
 
     def test_late_subjective_parsing(self):
