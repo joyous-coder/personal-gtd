@@ -1,7 +1,7 @@
 """笔记写入后端：FNS REST API 与固定文件夹。
 
 两种后端都实现 `NotesWriter`（`read` / `write` / `delete`），路径一律是
-**相对 vault 根**的路径（如 `7-规划回顾/73-回顾/721-日维度/review-....md`）。
+**相对 vault 根**的路径（如 `7-规划回顾/2-回顾/1-日维度/review-....md`）。
 `writer_chain` 按环境变量决定用哪个后端，`write_with_fallback` 在链上依次尝试。
 
 FNS 的两个坑：

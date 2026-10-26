@@ -4,7 +4,7 @@
 
 ## 日回顾（每天一篇）
 
-落点：`7-规划回顾/73-回顾/721-日维度/review-YYYY-MM-DD-星期X.md`（星期的写法是 `星期一 … 星期日`）。
+落点：`7-规划回顾/2-回顾/1-日维度/review-YYYY-MM-DD-星期X.md`（星期的写法是 `星期一 … 星期日`）。
 
 流程：
 
@@ -34,7 +34,7 @@
 ## 周回顾（周日）
 
 1. `report --from <周一> --to <周日>` 拿数据和 Markdown；
-2. 写 `7-规划回顾/73-回顾/722-周维度/review-YYYY-Www.md`（ISO 周；写完要用户确认）。
+2. 写 `7-规划回顾/2-回顾/2-周维度/review-YYYY-Www.md`（ISO 周；写完要用户确认）。
 
 内容：
 
@@ -47,7 +47,7 @@
 ## 月回顾（月末）
 
 1. `monthly --month YYYY-MM` 拿完成率与金额；
-2. 写 `7-规划回顾/73-回顾/723-月维度/review-YYYY-MM.md`（首次月结时目录由 `init` 建）。
+2. 写 `7-规划回顾/2-回顾/3-月维度/review-YYYY-MM.md`（首次月结时目录由 `init` 建）。
 
 内容：
 
@@ -72,7 +72,7 @@
 - 对账：`audit --from ... --to ...`，不一致时以滴答重算为准并修正 frontmatter；`audit` 不会写文件。
   - 对账字段：`earned_total`、`denominator`、`rate`、`spendable` 与周账三项 `weekly_earned` / `weekly_spent` / `weekly_balance`（查余额异常）。
   - 结算时确认过主观超时的日子，**对账要带同一份** `audit --late-subjective ID1,ID2`，否则重算按「未确认」不打折，必然对不上。看到「该日有主观超时折扣；请用 --late-subjective 复核」就是这个原因，别急着改 frontmatter。
-  - `721-日维度` 里老的自适应日总结没有 frontmatter，会被判为「不是账本笔记，已跳过」，不是账本错误。
+  - `1-日维度` 里老的自适应日总结没有 frontmatter，会被判为「不是账本笔记，已跳过」，不是账本错误。
 
 ## 语气
 

@@ -30,6 +30,7 @@ SKILL.md + references/ + scripts/ + assets/
 |---|---|---|
 | `PERSONAL_GTD_VAULT_DIR` | 固定文件夹写入的 vault 根 | 无；不设置则只用 FNS 或不可写 |
 | `PERSONAL_GTD_FNS_URL` / `PERSONAL_GTD_FNS_TOKEN` | FNS REST 写入 | 无 |
+| `PERSONAL_GTD_DIR` | GTD 输出的根目录（相对 vault 根） | `7-规划回顾`；子目录由 `init` 自动建 |
 | `PERSONAL_GTD_CONFIG` | 配置文件路径 | `~/.config/personal-gtd/config.json` |
 | `PERSONAL_GTD_DIDA_CONFIG` | 滴答 token 文件 | `~/.config/dida-cli/config.json` |
 | `PERSONAL_GTD_PYTHON` | Python 解释器 | `python3`，否则 `python` |

@@ -14,7 +14,7 @@
 - `settle` 默认拒绝覆盖已存在的日回顾（保护人写的总结/确认/谋划/身份反馈），
   `--force` 才整篇重写；`backfill` 按日期升序逐天 `settle`，默认跳过已存在的日回顾。
 - `balance` / `report` / `monthly` 只认带 `date` + `earned_total` 的账本 frontmatter；
-  `721-日维度` 里老的自适应日总结（无 frontmatter）按「跳过」处理，不算 0% 的一天。
+  `1-日维度` 里老的自适应日总结（无 frontmatter）按「跳过」处理，不算 0% 的一天。
 - `audit` 用滴答重算后与 frontmatter 对账；结算时确认过主观逾期的日子要带
   `--late-subjective IDS` 才能对上。
 - `report` / `monthly` 只读日回顾 frontmatter，打印周/月回顾 Markdown，**不写文件**
@@ -93,11 +93,15 @@ from lib.scoring import (  # noqa: E402
 )
 from lib.settle import settle_day  # noqa: E402
 
-#: 日回顾在 `config.reviews_dir` 下的子目录，与设计稿的目录结构一致
-DAILY_SUBDIR = "721-日维度"
+#: GTD 输出的固定子结构（相对 `config.gtd_dir`；由 skill 自己建，不走配置）
+PLANS_SUBDIR = "1-规划"
+REVIEWS_SUBDIR = "2-回顾"
 
-#: `init` 在 folder 模式下补齐的回顾子目录（设计稿 §6 的数据落点）
-REVIEW_SUBDIRS = (DAILY_SUBDIR, "722-周维度", "723-月维度")
+#: 日回顾在回顾区下的子目录
+DAILY_SUBDIR = "1-日维度"
+
+#: `init` 在 folder 模式下补齐的回顾子目录
+REVIEW_SUBDIRS = (DAILY_SUBDIR, "2-周维度", "3-月维度")
 
 #: 文件名里的星期写法（设计稿 `review-YYYY-MM-DD-dddd.md` 的 dddd）；
 #: 与正文 `{{weekday}}` 用的 `周一` 不是同一套，互不影响
@@ -229,7 +233,7 @@ def _previous_from(text: str | None) -> dict[str, float]:
 def _is_ledger(values: dict[str, object]) -> bool:
     """frontmatter 是不是本 skill 写的账本。
 
-    `721-日维度` 里还有八篇老的自适应日总结（没有 frontmatter，或只有
+    `1-日维度` 里还有八篇老的自适应日总结（没有 frontmatter，或只有
     `created` / `tags`），`parse_frontmatter` 对它们返回 `{}`。把它们当成
     「工作日完成率 0」会把月完成率腰斩，所以必须要求 `date` + `earned_total`。
     """
@@ -246,9 +250,10 @@ def _score_payload(score: DayScore) -> dict[str, object]:
 
 
 def _review_rel_path(day: date, config: Config) -> str:
-    reviews_dir = config.reviews_dir.strip("/")
+    """日回顾在 vault 里的相对路径：`<gtd_dir>/2-回顾/1-日维度/review-<日期>-<星期>.md`。"""
+    root = config.gtd_dir.strip("/")
     weekday = FILENAME_WEEKDAYS[day.weekday()]
-    return f"{reviews_dir}/{DAILY_SUBDIR}/review-{day.isoformat()}-{weekday}.md"
+    return f"{root}/{REVIEWS_SUBDIR}/{DAILY_SUBDIR}/review-{day.isoformat()}-{weekday}.md"
 
 
 def _read_note(writers: Sequence[NotesWriter], rel_path: str) -> str | None:
@@ -815,7 +820,7 @@ def _load_day_frontmatter(
 ) -> tuple[list[dict[str, object]], list[date]]:
     """读区间内每天的日回顾 frontmatter；缺的、不是账本的都算 `missing`。
 
-    `721-日维度` 里还有老的自适应日总结，它们的 frontmatter 解析出来是 `{}`；
+    `1-日维度` 里还有老的自适应日总结，它们的 frontmatter 解析出来是 `{}`；
     当成「完成率 0」会把统计拉垮，所以只接受带 `date` + `earned_total` 的账本，
     其余按「跳过」处理并说明原因。
     """
@@ -989,7 +994,7 @@ def _version_line(label: str, argv: list[str] | None) -> str:
 
 
 def _ensure_review_dirs(config: Config) -> list[str]:
-    """folder 模式下补齐 `73-回顾` 的三个维度目录；返回要打印的行。
+    """folder 模式下补齐 `2-回顾` 的三个维度目录；返回要打印的行。
 
     设计稿把 `init` 定义为「配置、目录、检查环境」。目录只在有
     `PERSONAL_GTD_VAULT_DIR` 时创建：FNS 后端的 vault 在服务端，本地建目录没有意义。
@@ -1003,18 +1008,24 @@ def _ensure_review_dirs(config: Config) -> list[str]:
             return ["回顾目录：FNS 模式，跳过本地目录创建"]
         return [f"回顾目录：缺 {ENV_VAULT_DIR}，跳过目录创建"]
 
-    base = Path(folder) / config.reviews_dir.strip("/")
+    base = Path(folder) / config.gtd_dir.strip("/")
     created: list[str] = []
     existed: list[str] = []
-    for name in REVIEW_SUBDIRS:
-        target = base / name
+
+    def _ensure(rel: str) -> None:
+        target = base / rel
         if target.is_dir():
-            existed.append(name)
+            existed.append(rel)
         else:
             target.mkdir(parents=True, exist_ok=True)
-            created.append(name)
+            created.append(rel)
 
-    lines = [f"回顾目录：{base}"]
+    _ensure(PLANS_SUBDIR)
+    _ensure(REVIEWS_SUBDIR)
+    for name in REVIEW_SUBDIRS:
+        _ensure(f"{REVIEWS_SUBDIR}/{name}")
+
+    lines = [f"GTD 目录：{base}"]
     if created:
         lines.append(f"  新建：{', '.join(created)}")
     if existed:
@@ -1030,6 +1041,8 @@ def _cmd_init(_args: argparse.Namespace) -> int:
         return 1
 
     print(f"配置文件：{config.config_path}")
+    print(f"GTD 根目录：{config.gtd_dir}（相对 vault 根）")
+    print(f"理论目录：{config.theory_dir}（相对 vault 根；读方法论原文用）")
     for line in _writer_mode_lines():
         print(line)
     try:
@@ -1071,6 +1084,8 @@ def _cmd_selfcheck(args: argparse.Namespace) -> int:
                     "python_version": report.python_version,
                     "lib_dir": report.lib_dir,
                     "writer": report.writer,
+                    "gtd_dir": config.gtd_dir,
+                    "theory_dir": config.theory_dir,
                     "dida_installed": report.dida_installed,
                     "dida_token_found": report.dida_token_found,
                     "missing_sources": list(report.missing_sources),
@@ -1084,6 +1099,8 @@ def _cmd_selfcheck(args: argparse.Namespace) -> int:
         )
     else:
         print(render_report(report))
+        print(f"GTD 根目录：{config.gtd_dir}（相对 vault 根）")
+        print(f"理论目录：{config.theory_dir}（相对 vault 根；读方法论原文用）")
     return 0 if report.ok else 1
 
 

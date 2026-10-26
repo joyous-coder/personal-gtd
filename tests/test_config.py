@@ -82,3 +82,35 @@ class TestInboxId(unittest.TestCase):
             p = Path(d) / "config.json"
             p.write_text(json.dumps({"inbox_id": "inbox123"}), encoding="utf-8")
             self.assertEqual(load_config(p).inbox_id, "inbox123")
+
+
+class TestGtdDirEnvOverride(unittest.TestCase):
+    """只留一个目录变量：GTD 输出的根目录，skill 在它下面自己建子目录。"""
+
+    def _load(self, extra_env, config_data=None):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "config.json"
+            p.write_text(json.dumps(config_data or {}), encoding="utf-8")
+            with patch.dict(os.environ, extra_env):
+                return load_config(p)
+
+    def test_env_overrides_file(self):
+        cfg = self._load(
+            {"PERSONAL_GTD_DIR": "从这里写"},
+            {"gtd_dir": "从文件写"},
+        )
+        self.assertEqual(cfg.gtd_dir, "从这里写")
+
+    def test_file_value_is_used_when_env_is_absent(self):
+        cfg = self._load({}, {"gtd_dir": "从文件写"})
+        self.assertEqual(cfg.gtd_dir, "从文件写")
+
+    def test_default_root(self):
+        self.assertEqual(Config().gtd_dir, "7-规划回顾")
+
+    def test_theory_dir_is_a_config_field(self):
+        """理论目录是"读"的位置（用户已有的笔记），只走配置文件。"""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "config.json"
+            p.write_text(json.dumps({"theory_dir": "方法论/从这里读"}), encoding="utf-8")
+            self.assertEqual(load_config(p).theory_dir, "方法论/从这里读")

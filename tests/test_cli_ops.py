@@ -12,7 +12,7 @@ class TestOps(unittest.TestCase):
     def test_balance_reads_frontmatter(self):
         with tempfile.TemporaryDirectory() as d:
             w = FolderWriter(Path(d))
-            w.write("7-规划回顾/73-回顾/721-日维度/review-2026-10-25-星期日.md",
+            w.write("7-规划回顾/2-回顾/1-日维度/review-2026-10-25-星期日.md",
                     "---\ndate: 2026-10-25\nearned_total: 11\nspendable: 22\nweekly_balance: 27\n---\n")
             with patch.object(gtd, "writer_chain", return_value=[w]), patch("sys.stdout") as out:
                 code = gtd.main(["balance", "--date", "2026-10-25", "--vault-dir", d])
@@ -43,7 +43,7 @@ class TestOps(unittest.TestCase):
             penalty_applied=False, items=())
         with tempfile.TemporaryDirectory() as d:
             w = FolderWriter(Path(d))
-            w.write("7-规划回顾/73-回顾/721-日维度/review-2026-10-25-星期日.md",
+            w.write("7-规划回顾/2-回顾/1-日维度/review-2026-10-25-星期日.md",
                     "---\ndate: 2026-10-25\nearned_total: 999\n---\n")
             with patch.object(gtd, "writer_chain", return_value=[w]), \
                  patch.object(gtd, "compute_day_score", return_value=fake_score), \
@@ -52,7 +52,7 @@ class TestOps(unittest.TestCase):
             self.assertEqual(code, 1)
 
 class TestLegacyNotesAreNotLedgers(unittest.TestCase):
-    """审阅修复：`721-日维度` 里的老自适应日总结没有 frontmatter，不能算 0% 的一天。"""
+    """审阅修复：`1-日维度` 里的老自适应日总结没有 frontmatter，不能算 0% 的一天。"""
 
     LEDGER_DAY = date(2026, 10, 22)   # 星期四，本 skill 写的账本
     LEGACY_DAY = date(2026, 10, 23)   # 星期五，老的自适应日总结（无 frontmatter）
@@ -165,9 +165,11 @@ class TestInitDirs(unittest.TestCase):
         ):
             os.environ["PERSONAL_GTD_VAULT_DIR"] = d
             self.assertEqual(gtd.main(["init"]), 0)
-            base = Path(d) / "7-规划回顾" / "73-回顾"
-            for name in ("721-日维度", "722-周维度", "723-月维度"):
-                self.assertTrue((base / name).is_dir(), name)
+            base = Path(d) / "7-规划回顾"
+            self.assertTrue((base / "1-规划").is_dir(), "1-规划")
+            self.assertTrue((base / "2-回顾").is_dir(), "2-回顾")
+            for name in ("1-日维度", "2-周维度", "3-月维度"):
+                self.assertTrue((base / "2-回顾" / name).is_dir(), name)
             # 重跑：目录已存在也不报错
             self.assertEqual(gtd.main(["init"]), 0)
 

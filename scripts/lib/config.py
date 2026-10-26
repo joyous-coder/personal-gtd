@@ -48,8 +48,13 @@ class Config:
     month_threshold: float = 0.6
     dida_base_url: str = "https://api.dida365.com/open/v1"
     dida_token_path: str = DEFAULT_DIDA_TOKEN_PATH
-    reviews_dir: str = "7-规划回顾/73-回顾"
-    plans_dir: str = "7-规划回顾/71-规划"
+    #: GTD 输出的根目录（相对 vault 根）。skill 在它下面自己建
+    #: `1-规划/` 与 `2-回顾/{1-日维度,2-周维度,3-月维度}/`。
+    #: 环境变量 `PERSONAL_GTD_DIR` 可覆盖。
+    gtd_dir: str = "7-规划回顾"
+    #: 读方法论原文的目录（相对 vault 根）；只走配置文件——这是"读"的位置，
+    #: 是你已有的笔记目录，不是 skill 建的
+    theory_dir: str = "我的方法论"
     penalty_habit: str = "惩罚习惯"
     #: 滴答收集箱 ID（形如 `inbox<账号号>`）。收集箱不在 `GET /project` 列表里，
     #: 要单独拉；这个 ID 带账号号，属于账号相关数据，所以放 config 而不是代码里。
@@ -127,6 +132,13 @@ def load_config(path: Path | None = None) -> Config:
         cfg = Config(**_coerce(raw))
     if os.environ.get("PERSONAL_GTD_DIDA_CONFIG"):
         cfg = replace(cfg, dida_token_path=_expand_path(os.environ["PERSONAL_GTD_DIDA_CONFIG"]))
+    # 目录：只留一个环境变量（GTD 输出根目录），其余子结构由 skill 自己建
+    for env_name, field_name in (
+        ("PERSONAL_GTD_DIR", "gtd_dir"),
+    ):
+        value = (os.environ.get(env_name) or "").strip()
+        if value:
+            cfg = replace(cfg, **{field_name: value.strip("/")})
     cfg = replace(cfg, config_path=str(p))
     _validate(cfg)
     return cfg

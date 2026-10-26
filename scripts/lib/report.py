@@ -1,6 +1,6 @@
 """周报与月报：汇总日回顾 frontmatter，算完成率与月金额，渲染回顾 Markdown。
 
-数据只来自日回顾的 frontmatter（`721-日维度`），不另存账本（设计稿 §6）：
+数据只来自日回顾的 frontmatter（`1-日维度`），不另存账本（设计稿 §6）：
 
 - 周汇总：区间内 `earned_total` / `planned_total` 求和，
   `rate = min(1, 收入 / min(60, max(30, 计划合计)))`。

@@ -50,7 +50,7 @@ scripts/gtd pack --out personal-gtd.zip   # 只含源码，不含 __pycache__/*.
 | `PERSONAL_GTD_CONFIG` | 配置文件 | `~/.config/personal-gtd/config.json` |
 | `PERSONAL_GTD_DIDA_CONFIG` | 滴答 token 文件 | `~/.config/dida-cli/config.json` |
 | `PERSONAL_GTD_PYTHON` | Python 解释器 | `python3`，否则 `python` |
-| `PERSONAL_GTD_THEORY_DIR` | 你自己的方法论笔记目录 | `<vault-root>/我的方法论` |
+| `PERSONAL_GTD_DIR` | GTD 输出的根目录（相对 vault 根） | `7-规划回顾`；`init` 在它下面建 `1-规划/` 与 `2-回顾/{1-日维度,2-周维度,3-月维度}/` |
 
 写入后端二选一（FNS 优先，folder 兜底）：`PERSONAL_GTD_FNS_URL` + `PERSONAL_GTD_FNS_TOKEN`
 或 `PERSONAL_GTD_VAULT_DIR`。**都没配时**，只有 `score` / `settle --dry-run` / `init` /
@@ -86,11 +86,12 @@ token 只从环境变量或外部文件读，**永不写进 config、笔记、�
 这个 skill 只做**执行化**，不发明方法论。它读你笔记目录里的原文来判分和排程：
 
 ```
-<PERSONAL_GTD_THEORY_DIR>/时间管理.md   ← 主笔记
-<PERSONAL_GTD_THEORY_DIR>/…             ← 它的子笔记
+<theory_dir>/时间管理.md   ← 主笔记
+<theory_dir>/…             ← 它的子笔记
 ```
 
-把 `PERSONAL_GTD_THEORY_DIR` 指到你自己写方法论的那个目录即可；
+`theory_dir` 是配置文件里的一个字段（相对 vault 根，默认 `我的方法论`），
+`gtd init` / `gtd selfcheck` 会把它打印出来。把它指到你自己写方法论的那个目录即可；
 `references/theory.md` 是导航与摘要，规则冲突时**以你的原文为准**。
 
 ## 目录

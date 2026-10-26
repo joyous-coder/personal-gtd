@@ -19,7 +19,7 @@ description: Use when the user wants to run their own 时间管理/GTD loop — 
 
 ## 铁律（违反任何一条就停下重来）
 
-1. **理论以原文为准**：`<THEORY_DIR>/时间管理.md` **及该目录下全部子笔记**（`THEORY_DIR` = `PERSONAL_GTD_THEORY_DIR`，默认 `<vault-root>/我的方法论`）。做判断前先读相关子笔记；本 skill 只做执行化，规则冲突时回原文，不自行发明方法论。索引见 `references/theory.md`。
+1. **理论以原文为准**：`<THEORY_DIR>/时间管理.md` **及该目录下全部子笔记**（`THEORY_DIR` = config 里的 `theory_dir`，默认 `<vault-root>/我的方法论`）。做判断前先读相关子笔记；本 skill 只做执行化，规则冲突时回原文，不自行发明方法论。索引见 `references/theory.md`。
 2. **四段闭环不跳段**：欲望（产生 → 筛选 → 询问确认 → 记录）→ 计划 → 执行 → 回顾。用户只问一段就只做一段，别顺手把后面几段全做掉。
 3. **每次写入前给确认卡**：写滴答任务、改标题、写笔记、扣分之前，都先给紧凑确认卡，用户回「过 / 改 / 拒」。没有「过」不写。
 4. **不接管番茄计时**：计时由用户在滴答 App 手动开；AI 只读 `focus` 记录，不起计时器、不催、不代打。
@@ -89,18 +89,19 @@ scripts\gtd.cmd <subcommand> ...    # Windows
 
 ```
 <VAULT>/
-└── 7-规划回顾/
-    ├── 71-规划/                 # 计划（714 周 / 713 月 / 712 年 / 716 项目）
-    └── 73-回顾/                 # 活目录
-        ├── 721-日维度/review-YYYY-MM-DD-星期X.md   # 每天一篇，唯一日汇总
-        ├── 722-周维度/review-YYYY-Www.md
-        └── 723-月维度/review-YYYY-MM.md
+└── 7-规划回顾/                  # GTD 根目录（PERSONAL_GTD_DIR / config.gtd_dir）
+    ├── 1-规划/                  # 计划（2 年 / 3 月 / 4 周 / 5 项目 / 1 人生维度）
+    └── 2-回顾/                  # 活目录
+        ├── 1-日维度/review-YYYY-MM-DD-星期X.md   # 每天一篇，唯一日汇总
+        ├── 2-周维度/review-YYYY-Www.md
+        └── 3-月维度/review-YYYY-MM.md
 ```
 
+- 上面这套子目录由 `gtd init` 自动建；**只写 `2-回顾/` 下的三个维度**，`1-规划/` 只在你确认后写。
 - 日回顾 frontmatter 是当天唯一的机器可读账本；正文写明细摘要。月/周视图从日回顾 frontmatter 聚合，不另存账本。
-- 只有带 `date` + `earned_total` 的 frontmatter 才算账本；`721-日维度` 里老的自适应日总结（无 frontmatter）会被 `balance` / `report` / `monthly` / `audit` 判为「不是账本笔记，已跳过」，**不会**被当成完成率 0 的一天。
+- 只有带 `date` + `earned_total` 的 frontmatter 才算账本；`1-日维度` 里老的自适应日总结（无 frontmatter）会被 `balance` / `report` / `monthly` / `audit` 判为「不是账本笔记，已跳过」，**不会**被当成完成率 0 的一天。
 - 幂等：同一天重跑覆盖同一篇，不追加第二份；但**默认拒绝**覆盖已存在的日回顾，`--force` 才重写（见上）。
-- **不写**废弃目录：`72-回顾`、`72-维度`、`74-项目`、`71-规划/715-项目`、`71-分类`。
+- 旧的编号目录（`71-规划`、`73-回顾`、`721-日维度` 等）已废弃清空，**不写**。
 
 ## 写入后端（必须先配一个）
 
@@ -142,7 +143,7 @@ scripts/gtd settle --date 2026-10-25 --vault-dir "<vault-root>"
 - [ ] 所有写操作都出过确认卡，且用户回过「过」。
 - [ ] 报出的每个数字都来自 `gtd.py` 输出（或用户原话），没有手算/猜测。
 - [ ] 没有猜 token、任务 ID、清单 ID；缺就查配置或问用户。
-- [ ] 没有写进废弃目录；日回顾只在 `721-日维度`。
+- [ ] 没有写进废弃目录；日回顾只在 `1-日维度`。
 - [ ] 没有在未确认时用 `backfill` / `settle --force` 覆盖已存在的日回顾；`settle` 被拒绝（退出 1）时没硬加 `--force`，需要覆盖时才加，且先读一遍旧内容。
 - [ ] 用 `score` 预填新任务时带了 `--size`（S/M/L），没有手算「优先级底分 × 规模」。
 - [ ] 结算过主观超时的日子，`audit` 带了同一份 `--late-subjective IDS`。

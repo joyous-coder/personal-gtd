@@ -43,7 +43,7 @@ ID 只是导航；**不要猜 ID**，要用时从 `dida project list` 或配置�
 
 ## frontmatter（日回顾，机器可读的唯一日汇总）
 
-文件：`7-规划回顾/73-回顾/721-日维度/review-YYYY-MM-DD-星期X.md`
+文件：`7-规划回顾/2-回顾/1-日维度/review-YYYY-MM-DD-星期X.md`
 
 | 字段 | 含义 |
 | --- | --- |
@@ -77,16 +77,18 @@ ID 只是导航；**不要猜 ID**，要用时从 `dida project list` 或配置�
 
 | 路径 | 用途 | 写？ |
 | --- | --- | --- |
-| `7-规划回顾/71-规划/` | 计划（714 周 / 713 月 / 712 年 / 716 项目） | 按确认卡 |
-| `7-规划回顾/73-回顾/721-日维度/` | 日回顾，每天一篇 | 是 |
-| `7-规划回顾/73-回顾/722-周维度/` | 周回顾 `review-YYYY-Www.md` | 按确认卡 |
-| `7-规划回顾/73-回顾/723-月维度/` | 月回顾 `review-YYYY-MM.md` | 按确认卡 |
-| `72-回顾`、`72-维度`、`74-项目`、`71-规划/715-项目`、`71-分类` | 空/废弃 | **不写** |
+| `7-规划回顾/` | GTD 根目录（`PERSONAL_GTD_DIR` / `config.gtd_dir`） | — |
+| `7-规划回顾/1-规划/` | 计划（1 人生维度 / 2 年 / 3 月 / 4 周 / 5 项目） | 按确认卡 |
+| `7-规划回顾/2-回顾/1-日维度/` | 日回顾，每天一篇 | 是 |
+| `7-规划回顾/2-回顾/2-周维度/` | 周回顾 `review-YYYY-Www.md` | 按确认卡 |
+| `7-规划回顾/2-回顾/3-月维度/` | 月回顾 `review-YYYY-MM.md` | 按确认卡 |
+
+子目录由 `gtd init` 自动建；旧的编号目录（`71-规划`、`73-回顾`、`721-日维度` 等）已废弃清空，**不写**。
 
 ## 配置文件与环境（非敏感项才进 config）
 
 - config：`PERSONAL_GTD_CONFIG`（默认 `~/.config/personal-gtd/config.json`；`init` 生成；示例见 `assets/config.example.json`）。
-- 字段：`vault`、`salary`、`reserve`、`daily_cap`、`weekly_cap`、`day_rate`、`week_rate`、`month_budget_rate`、`month_threshold`、`dida_base_url`、`dida_token_path`、`reviews_dir`、`plans_dir`、`penalty_habit`、`tags`。
+- 字段：`vault`、`salary`、`reserve`、`daily_cap`、`weekly_cap`、`day_rate`、`week_rate`、`month_budget_rate`、`month_threshold`、`dida_base_url`、`dida_token_path`、`gtd_dir`、`theory_dir`、`penalty_habit`、`inbox_id`、`tags`。
 - 滴答 token：`PERSONAL_GTD_DIDA_CONFIG`（默认 `~/.config/dida-cli/config.json`）的 `access_token`（只读，不打印）。
 - FNS 凭据与 vault 目录：只从环境变量读，见 `writing.md`。
 - 清单 ID 是**账号相关**的；换账号或换机器后若 ID 不同，运行 `dida project list` 重新取，不要硬编码旧 ID。
