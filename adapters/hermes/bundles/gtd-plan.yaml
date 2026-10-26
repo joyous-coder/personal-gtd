@@ -1,0 +1,9 @@
+name: gtd-plan
+description: 用 personal-gtd 排今天/明天/这周或拆项目
+skills:
+  - personal-gtd
+instruction: |
+  使用 personal-gtd 的「计划」模式：先读 SKILL.md 铁律与模式分流，再读 references/plan.md。
+  按日程五步（巡检 → 估算 → 选择 → 排序 → 触发+积分）或项目分解处理用户输入。
+  排序要考虑路线聚类，避免来回折返；写入前给确认卡。
+  收尾时按 SKILL.md 铁律提示下一阶段，只提示不自动执行。

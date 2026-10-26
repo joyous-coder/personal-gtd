@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "id": "t1",
+      "projectId": "inbox",
+      "title": "写周报 $4",
+      "priority": 5,
+      "dueDate": "2026-10-25T10:00:00.000+0000",
+      "tags": ["下一步"]
+    }
+  ],
+  "columns": []
+}

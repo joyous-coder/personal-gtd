@@ -1,0 +1,8 @@
+name: gtd-review
+description: 用 personal-gtd 做日结/周结/月结
+skills:
+  - personal-gtd
+instruction: |
+  使用 personal-gtd 的「回顾」模式：先读 SKILL.md 铁律与模式分流，再读 references/review.md。
+  先跑 scripts/gtd 的 settle/report/monthly 取数，不手算；回顾包含总结、确认、谋划三个动作。
+  收尾时按 SKILL.md 铁律提示下一阶段，只提示不自动执行。

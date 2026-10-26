@@ -1,0 +1,8 @@
+name: gtd-settle
+description: 用 personal-gtd 结算某一天（先 dry-run）
+skills:
+  - personal-gtd
+instruction: |
+  使用 personal-gtd 的「日结」模式。先运行 scripts/gtd settle --date <YYYY-MM-DD> --dry-run，把数字给用户看。
+  只有用户确认后才真写；如果当天日回顾已存在，不要覆盖，除非用户明确要求 --force。写入后用 balance 读回余额。
+  收尾时按 SKILL.md 铁律提示下一阶段，只提示不自动执行。

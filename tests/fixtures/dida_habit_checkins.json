@@ -1,0 +1,11 @@
+[
+  {
+    "habitId": "h1",
+    "year": 2026,
+    "checkins": [
+      {"stamp": 20261020, "value": 1, "goal": 1},
+      {"stamp": 20261021, "value": 0, "goal": 1}
+    ]
+  },
+  {"habitId": "h2", "year": 2026, "checkins": []}
+]

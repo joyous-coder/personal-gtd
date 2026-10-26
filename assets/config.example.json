@@ -1,0 +1,25 @@
+{
+  "vault": "Obsidian_Vault",
+  "salary": 0.0,
+  "reserve": 5.0,
+  "daily_cap": 60.0,
+  "weekly_cap": 360.0,
+  "day_rate": 2.0,
+  "week_rate": 1.0,
+  "month_budget_rate": 0.1,
+  "month_threshold": 0.6,
+  "dida_base_url": "https://api.dida365.com/open/v1",
+  "dida_token_path": "~/.config/dida-cli/config.json",
+  "reviews_dir": "7-规划回顾/73-回顾",
+  "plans_dir": "7-规划回顾/71-规划",
+  "penalty_habit": "惩罚习惯",
+  "inbox_id": "",
+  "config_path": "~/.config/personal-gtd/config.json",
+  "tags": {
+    "consumption": "积分消费",
+    "breakthrough": "突破",
+    "interrupt_in": "内在干扰",
+    "interrupt_out": "外在干扰",
+    "u_event": "U事件"
+  }
+}

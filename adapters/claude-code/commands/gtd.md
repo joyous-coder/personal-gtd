@@ -1,0 +1,12 @@
+---
+description: personal-gtd 总入口：判断意图后进入对应模式
+argument-hint: <你要做的事>
+---
+使用 `personal-gtd` skill 的**总入口**：
+
+1. 读 `SKILL.md` 的**模式分流表**，把下面这句话归到某一模式（收集 / 计划 / 执行 / 日结 / 周结 / 月结 / 查询 / 对账 / 初始化）。判断不了就问用户是哪一段，**不要猜**。
+
+$ARGUMENTS
+
+2. 再读该模式的 reference 执行：`references/capture.md` / `plan.md` / `execute.md` / `review.md` / `scoring.md` / `writing.md`。
+3. 写入滴答或笔记前给确认卡；收尾时按 SKILL.md 铁律提示下一阶段（只提示，不自动执行）。

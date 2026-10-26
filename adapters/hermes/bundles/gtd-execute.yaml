@@ -1,0 +1,9 @@
+name: gtd-execute
+description: 用 personal-gtd 处理开始/卡住/拖延
+skills:
+  - personal-gtd
+instruction: |
+  使用 personal-gtd 的「执行」模式：先读 SKILL.md 铁律与模式分流，再读 references/execute.md。
+  按开始前 30 秒 / 干扰处理 / 卡住诊断树处理用户输入；只给一个诊断、一个最小动作、一个复查时间。
+  不要接管番茄计时。
+  收尾时按 SKILL.md 铁律提示下一阶段，只提示不自动执行。

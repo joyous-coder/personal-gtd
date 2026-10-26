@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+# Portable launcher.
+#   - PERSONAL_GTD_PYTHON wins; otherwise pick the first usable python3/python.
+#   - Refuses to run on an incomplete install (a module is only .pyc):
+#     bytecode is bound to one CPython version, so it dies on the next machine.
+set -eu
+DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+
+MISSING=""
+for m in config dida models notes report review_note scoring settle; do
+  if [ ! -f "$DIR/lib/$m.py" ]; then
+    MISSING="$MISSING $m"
+  fi
+done
+if [ -n "$MISSING" ]; then
+  echo "personal-gtd 安装不完整：缺少源码$MISSING" >&2
+  echo "只有 .pyc 不可用（字节码与 Python 版本绑定）。用 \`gtd pack\` 打源码包重装。" >&2
+  exit 2
+fi
+
+usable() {
+  command -v "$1" >/dev/null 2>&1 || return 1
+  "$1" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1
+}
+
+if [ -n "${PERSONAL_GTD_PYTHON:-}" ]; then
+  PY=$PERSONAL_GTD_PYTHON
+else
+  PY=""
+  for cand in python3 python python3.12 python3.11 python3.13 python3.10; do
+    if usable "$cand"; then
+      PY=$cand
+      break
+    fi
+  done
+  if [ -z "$PY" ]; then
+    echo "找不到可用的 Python 3.10+：装一个，或设 PERSONAL_GTD_PYTHON。" >&2
+    exit 127
+  fi
+fi
+
+exec "$PY" "$DIR/gtd.py" "$@"

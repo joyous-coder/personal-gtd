@@ -1,0 +1,23 @@
+[
+  {
+    "id": "c1",
+    "projectId": "p1",
+    "title": "改简历 $6",
+    "priority": 5,
+    "completedTime": "2026-10-24T15:30:00.000+0000",
+    "dueDate": "2026-10-24T14:00:00.000+0000",
+    "tags": ["突破"]
+  },
+  {
+    "id": "c2",
+    "projectId": "p1",
+    "title": "刷一套面试题 $3",
+    "priority": 3,
+    "repeatFlag": "RRULE:FREQ=DAILY;INTERVAL=1",
+    "parentId": "c0",
+    "childIds": [],
+    "completedTime": "2026-10-25T02:10:00.000+0000",
+    "dueDate": "2026-10-25T10:00:00.000+0000",
+    "tags": []
+  }
+]
